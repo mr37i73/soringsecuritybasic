@@ -1,0 +1,153 @@
+We have default authentication provider named as DAO AuthenticationProvider and this takes help from userdetails service
+available in springsecurity in order to get the credentials from storage system.
+
+UserDetails interface is use to represent the user that we get from storage system and its implemented class is User.
+And this one is very important and specially two construvctors it have. In this we have only getter methods no setters
+once object is created by constructor its cant be chganged.
+
+The default implementation of AuthenticationManager is ProviderManager.
+
+Whenever we create a bean for InMemoryUserDetailsManager,then DAOAuthentication will try to authenticate by invoking the method
+in userDetailsManager named as loadUserByUserName and the return type is UserDetails.
+
+UserDetails VS Authenticatrion:
+Why we have two different ways to store the login user
+UserDetails or User class we use specially when we load the  user details form storage system.
+Once we retrieved the details we share the same to AuthenticationProviders, and once the auth is successful, then it is
+the responsibility of AuthenticationProvider to transform all the info with success details to Authentication object
+data type. In DaoAuthenticationProvider we have a mothod authenticate that haev authentication logic adn it calls a mothod createSuccessAuthentication
+that create Authentication object from UserDetails.
+
+using authentication object, we can store only the details related to the authentication like username, password, authorities
+whether the authentication is successful or not. But we don't have to store the details like whether the account is expired,
+whether the account is disabled or enabled because only if these conditions satisfied, then only the authentication will be successful.
+So that's why there is no reason for me to carry again those user details to the internal components of the Spring Security framework.
+
+The default clas for Authentication interface is UserNamePasswordAuthenticationToken.
+
+NOTE:
+UserDetails is the return type of all methods where we trying load the user from storage system like inside UserDetaiulsService.
+and UserDetailsManager.
+Authentication is return type in all scenerios where we trying to determine if the authentication is successful or not
+like in AuthenticationProvider and AuthenticationManager.
+sss
+Whichever the bean get created in projectConfigSecurity file, thats implementation call will be called.
+
+Whenever we create create a bean for jdbcUserDetailsService, then make sure to use Datasource object...this will contrains the DB info and object will be
+create by compiler once you mentioned the DB details in application file.
+
+The first method that gets execute by DAOAuthenticationProvider wheather in jdbcDetaisManager ot inMemoryUserDetaislManger is loadUserByUserName, this method accepts
+username thats provide byuser in FE, and based upon that user name use to fetched from DB.
+
+If you want to go for jdbcUserDetailsManager then you need to follow the same naming conventions that mentioned by spring security like tablename should be
+users and column came also need to be followed.
+But if you want to go for authenticate with email instead of username like above implementation, then you need to create entity class. and create repos etc.
+And also we need to implement UserDetailsService interface because compiler first always checks which implemetation of UserDetialsService bean has been created
+and that particular class loadUserbyUserName method needs to be execute. Yes, we also need to override loadUserByUsername and return type is UserDetails.
+Next will be handled by DaoAuthenticationProvider for authentication logic.
+========================================================================================================================================================
+
+PASSWORD ENCODER:
+Fot this we have PasswordEncoder interface that have three methods
+1) String encode(Charsequence RawPassword): it use to encode the plain password to encrypted one.
+2) Boolean matches(CharSequence rawPassword, String encodedPassword): it will compare the hash values of both passwords, first encrypt the password entered by
+user and copare it with encrypted password fetched from DB.
+
+Apart from these, we also have default method that always return true.
+default boolean upgradeEncoding(String encodedPassword){
+return false
+}
+This will provide more security to decode the password by encode the raw password two times, if we return true.
+
+Different implementation for PasswordEncoder:
+1)NoOpPasswordEncoder(Not recommended for prod env)
+2)StandardPasswordEncoder(Not recommended for prod env and also deprecated, its there to support some deprecated application)
+3)Pbkdf2PasswordEncoder(Now a days not secure to use, can decrypt by bruteforce if have strong GPU machine)
+4)BCryptPasswordEncoder
+5)SCryptPasswordEncoder
+6)Argon2PasswordEncoder
+
+The last two implemenations will require a lot of computation to decode, hence will use resources at high level, thats why we are left with BCryptPasswordEncoder
+If you encorage users to create 8 characters password with combination of special caharacter and numbner BCryptPasswordEncoder is good enough, also
+provide good performance.
+The first three characters in BCryptPasswordEncoder shows which version of BCrypt we have used, next three represents worl;oad factor(bydefault its 10),
+to make hacker life dificult you can increase the workload to 20
+If you wantto gfo for default values of BCrypt encoder like worload factor, strength etc. then while create bean for it...use default constructor.
+You can change the version, adding a salt, strength value, workload factor by passing in cinstructor it have around 5 constructor. Yhis way we can customize the encoded
+value.
+
+Flow of spring Security, if we use customize implementation of UserServiceDetails...means we are not using jdbcUserDetailsService, in other words we use
+custom table name instead of user. As we already overide loadUserByUsername by implement UserServiceDetials interface. After executing loadUserByUsername,
+it will return UserDetails object, then we have DAOAuthenticationProvider in our picture, that have a mrthod named as additionalAuthenticationChecks,
+inside this we have a call to matches method of PasswordEncoder interface. There first raw password(provide by user in FE) will be encrypt to hash then compare
+
+========================================================================================================================================================
+
+CUSTOM AUTHENTICATION PROVIDER:
+Why Custom authentication provider is required:
+What if client has requirement to allow to those user that have some specific age or country. OR what to go for OTP authentication, OAuth2 etc
+
+2 abstract methods mentioned in AuthenticationProvider interface:
+1) Authentication authenticate(Authentication authentication)
+2) boolean supports(Class<?> authentication)
+
+In authenticate method you will provide logic to get the details from DB and compare the password if paswword matches then return UsernamePasswordAuthenticationToken
+(username, pwd, authorities). In this constructor we have code to set the isAuthenticate to true in Authenticxation object.
+In case if you want do some activities once authentication got success, you can use this.eventPublisher.publishAuthenticationSuccess() method in ProviderManager.class file
+
+==========================================================================================================================================================
+
+AUTHORIZATION:
+Authorities and roleas info are sotored inside GrantedAauthority. Threr only one method inside GrantedAuthority which return the name of authority role.
+SimpleGrantedAuthority is the default inplementation class of GrantedAuthority interface inside Spring Security framework.
+
+GrantedAuthority interface have only one String getAuthority().
+
+we may have qustion where does this authorities stored in UserDetails and Authentication objects.
+User and UserNamePasswordAuthenticationToken class have a method named as getAuthorities.
+
+In AuthenticationProvider for user and password, we override method Authenticate and in there we return object of UsernamePasswordAuthenticationToken(username, pwd, authorities).
+Here authorities is a list and we add object of SimpleGrantedAuthority.
+authorities.add(new SimpleGrantedAuthority(customer.get(0).getRole())).
+==========================================================================================================================================================
+
+AUTHORITY VS ROLE:
+Authority is like an individual privilege or an action like VIEWACCOUNT, VIEWCARD. Restriction action in a fined grained manner
+Role is a group of priviledges or actions like ROLE_ADMIN, ROLE_USER. Restriction in coarsr-grained manner
+
+==========================================================================================================================================================
+Tokens:
+We have jsessionid created by spring security by default, by using user dont need to provide credentials again once get loged in. As it stored as a cokkie
+in browser.
+Disadvantages of JSESSIONID:
+1) We cant store any user information in it.
+2) It stored as a cookie in browser, if browser get compromised then not good.
+
+A token can be a plain string of format universally unique identifier, or it can be of type JWT token. JWT, means JSON Web Token. And these tokens will be generated usually
+as soon as the authentication of the end user is completed,
+
+And once that token is generated during the login operation, the same token can be leveraged by the client applications to send to the backend system
+whenever they're trying to access a protected resource. And if this token that's sent by my client application is valid then my backend server is going to
+respond with the proper response.
+
+Note:
+Check tghe advantages of tokens in 82 lecture:
+
+JSON token has three parts:
+1)Header:  we have metadata about token like which algo etc.
+2)Payload: Have user iformation
+3)Signature(optional)
+
+Most basic approach, after authentication it suppose to create JWT token and provide it to client, and store it in backend application, then client send the token in header to
+backend then it will matches them and take decision.
+But with the help of JWT signature we dont enev have to store it anywhere, what my server will do while it crteate token it will digitally signed it, so
+if anywhere temper it in future it will get to know about it.
+Signature is like digitally signature of your token and its optional in case of if the party that you share  the JWT token is interbal network and that someone
+you can trust but not on open web.
+
+But if you are sharing this token to  client applications which will be used by by all usersin open web, then we need to amke sure that no changed
+ther header and body values liek Authorities, username etc.
+
+How JWT token works:
+HMACSHA256(base6+UrlEncode(header)+ "." +base6+UrlEncode(payload), secret), and this secret is known only to server...this is how to create signature. If client send it back to server with temper values
+It will compare the hash value(Signature) with newly created server it will create again with hash value(Signautre) provided by client.

@@ -15,23 +15,29 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Service
-public class EazyBankUserDetails implements UserDetailsService {
+public class EazyBankUserDetails {
+        //implements UserDetailsService {
 
     @Autowired
     CustomerRepository customerRepository;
-    @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        String userName, password=null;
-        List<GrantedAuthority> authorities=new ArrayList<>();
-        Customer customer = customerRepository.findByEmail(username);
-        if(customer == null) {
-            throw new UsernameNotFoundException("User not found "+username);
-        }
-        else {
-            userName = customer.getEmail();
-            password = customer.getPwd();
-            authorities.add(new SimpleGrantedAuthority(customer.getRole()));
-        }
-        return new User(userName,password,authorities);
-    }
+
+    //If you are not using CustomAuthenticationProvider then you can use it, as getting user details are alrasdy there in custom authentication provider
+
+
+
+//    @Override
+//    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+//        String userName, password=null;
+//        List<GrantedAuthority> authorities=new ArrayList<>();
+//        Customer customer = customerRepository.findByEmail(username);
+//        if(customer == null) {
+//            throw new UsernameNotFoundException("User not found "+username);
+//        }
+//        else {
+//            userName = customer.getEmail();
+//            password = customer.getPwd();
+//            authorities.add(new SimpleGrantedAuthority(customer.getRole()));
+//        }
+//      return new User(userName,password,authorities);
+//    }
 }

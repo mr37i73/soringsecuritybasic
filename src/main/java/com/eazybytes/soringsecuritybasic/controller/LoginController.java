@@ -25,7 +25,7 @@ public class LoginController {
         ResponseEntity response = null;
         customer.setPwd(hashedPassword);
         Customer registerCustomer = customerRepository.save(customer);
-        if(customer.getId()>0) {
+        if(customer.getId()>-1) {
             response = ResponseEntity.status(HttpStatus.CREATED).body("User has been registered");
         }
         else {
